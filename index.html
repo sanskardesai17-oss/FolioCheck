@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FolioCheck</title>
+<style>
+:root{--bg:#fff;--card:#f3f7fa;--line:#d5dfe7;--tx:#1b2733;--mut:#5b6b7a;--navy:#0f2a47;--teal:#0e7c86;--ok:#2e8b57;--warn:#c98a10;--bad:#c4573b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1720;--card:#18232f;--line:#2b3a49;--tx:#e6edf3;--mut:#98a8b8;--navy:#cfe3ef;--teal:#3cc0cb;--ok:#5cc489;--warn:#e5b04a;--bad:#e8806a}}
+:root[data-theme="dark"]{--bg:#0f1720;--card:#18232f;--line:#2b3a49;--tx:#e6edf3;--mut:#98a8b8;--navy:#cfe3ef;--teal:#3cc0cb;--ok:#5cc489;--warn:#e5b04a;--bad:#e8806a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 Calibri,"Segoe UI",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+h1{margin:0;font-size:28px;color:var(--navy)} .sub{color:var(--mut);margin:2px 0 18px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--tx);padding:8px 14px;border-radius:999px;cursor:pointer;font:inherit}
+.tab.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+textarea{width:100%;min-height:230px;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:10px;padding:12px;font:14px/1.5 ui-monospace,Consolas,monospace;resize:vertical}
+#rub{min-height:60px;display:none;margin-bottom:10px}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 20px;align-items:center}
+button.pri{background:var(--teal);color:#fff;border:0;padding:10px 20px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer}
+button.sec{background:none;color:var(--teal);border:1px solid var(--teal);padding:9px 16px;border-radius:8px;font:inherit;cursor:pointer}
+.grid{display:grid;grid-template-columns:200px 1fr;gap:16px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.score{text-align:center}.ring{font-size:52px;font-weight:800;line-height:1}
+.lbl{color:var(--mut);margin-top:6px}
+h2{font-size:17px;margin:0 0 10px;color:var(--navy)}
+ul{list-style:none;padding:0;margin:0}
+li{padding:7px 0;border-bottom:1px solid var(--line);display:flex;gap:10px}
+li:last-child{border:0}
+.tag{flex:none;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;height:fit-content;margin-top:2px;color:#fff}
+.t-ok{background:var(--ok)}.t-part{background:var(--warn)}.t-miss{background:var(--bad)}
+.sg{margin-top:16px}
+.small{font-size:13px;color:var(--mut)}
+#out{display:none}
+#jd{min-height:70px;margin-top:10px}
+.bar{flex:1;background:var(--line);border-radius:6px;height:12px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--teal)}
+.hist{display:flex;gap:10px;align-items:flex-end;height:100px;margin-top:10px}
+.hb{width:40px;background:var(--teal);border-radius:6px 6px 0 0;position:relative}.hb em{position:absolute;top:-18px;left:0;right:0;text-align:center;font-style:normal;font-size:12px;color:var(--mut)}
+.chip{display:inline-block;padding:3px 10px;margin:3px 4px 3px 0;border-radius:999px;font-size:13px;color:#fff}
+</style></head>
+<body><div class="wrap">
+<h1>FolioCheck</h1>
+<p class="sub">Paste a resume, project report or lab report. Get missing requirements and structure tips. Runs fully in your browser; nothing is uploaded.</p>
+<div class="tabs" id="tabs"></div>
+<textarea id="rub" placeholder="Rubric sections, comma separated. e.g. Abstract, Methodology, Results, Conclusion, References"></textarea>
+<textarea id="txt" placeholder="Paste your document text here..."></textarea>
+<textarea id="jd" placeholder="Optional (Resume only): paste a job description to check keyword match..."></textarea>
+<div class="row">
+<button class="pri" id="go">Check document</button>
+<button class="sec" id="sample">Load sample</button>
+<label class="small">or upload .txt/.md <input type="file" id="file" accept=".txt,.md,text/plain"></label>
+</div>
+<div id="out">
+<div class="grid">
+<div class="card score"><div class="ring" id="sc">0</div><div class="lbl">Readiness score / 100</div><div class="small" id="verdict" style="margin-top:8px"></div></div>
+<div class="card"><h2>Requirements check</h2><ul id="req"></ul></div>
+</div>
+<div class="card sg"><h2>Structural suggestions</h2><ul id="sug"></ul></div>
+<div class="card sg"><h2>Section balance (words per section)</h2><ul id="bal"></ul></div>
+<div class="card sg" id="kwc" style="display:none"><h2>Job description keyword match</h2><div id="kw"></div></div>
+<div class="card sg"><h2>Your progress</h2><div class="small" id="delta"></div><div class="hist" id="hist"></div></div>
+<div class="row"><button class="pri" id="cp">Copy report</button></div>
+</div>
+</div>
+<script>
+var TYPES={
+resume:{label:"Resume",items:[["Contact details",/^(contact|personal)/i],["Summary / Objective",/^(summary|objective|profile|about)/i,/\b(seeking|aspiring|motivated)\b/i],["Education",/^education|academic/i,/\b(b\.?tech|b\.?e\b|b\.?sc|bachelor|cgpa|gpa)\b/i],["Skills",/^(technical )?skills|technologies/i],["Projects",/^(academic )?projects?/i],["Experience / Internship",/^(work )?experience|^internships?/i,/\bintern(ship)?\b/i],["Achievements / Certifications",/^(achievements|certifications?|awards|honou?rs)/i]]},
+project:{label:"Project report",items:[["Title & Abstract",/^abstract|^summary/i],["Introduction / Problem statement",/^(introduction|problem statement|background)/i],["Objectives",/^(aims? and )?objectives?|^aim/i],["Literature review",/^(literature (review|survey)|related work)/i],["Methodology",/^(methodology|methods?|approach|design)/i],["Implementation / Results",/^(implementation|results?|findings|analysis)/i],["Conclusion & Future scope",/^(conclusions?|future (work|scope))/i],["References",/^(references|bibliography)/i]]},
+lab:{label:"Lab report",items:[["Aim / Objective",/^(aim|objectives?)/i],["Apparatus / Materials",/^(apparatus|materials|equipment|components)/i],["Theory",/^(theory|principle|background)/i],["Procedure",/^(procedure|method)/i],["Observations / Data",/^(observations?|data|readings?)/i],["Calculations",/^calculations?/i],["Result",/^results?/i],["Conclusion / Discussion",/^(conclusions?|discussion)/i],["Precautions",/^precautions?/i],["References",/^references/i]]},
+custom:{label:"Custom rubric",items:[]}};
+var cur="resume",$=function(i){return document.getElementById(i)};
+function tabs(){$("tabs").innerHTML="";for(var k in TYPES){(function(k){var b=document.createElement("button");b.className="tab"+(k==cur?" on":"");b.textContent=TYPES[k].label;b.onclick=function(){cur=k;$("rub").style.display=k=="custom"?"block":"none";$("jd").style.display=k=="resume"?"block":"none";tabs()};$("tabs").appendChild(b)})(k)}}
+function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function check(){
+var text=$("txt").value,lines=text.split(/\r?\n/).map(function(l){return l.trim()}),items=TYPES[cur].items;
+if(cur=="custom"){items=$("rub").value.split(",").map(function(s){return s.trim()}).filter(Boolean).map(function(n){return [n,new RegExp("^"+esc(n),"i"),new RegExp("\\b"+esc(n)+"\\b","i")]})}
+if(!text.trim()||!items.length){alert(cur=="custom"&&!items.length?"Add rubric sections first.":"Paste some text first.");return}
+var res=[],pos=[],full=0,part=0;
+items.forEach(function(it){
+var idx=-1;for(var i=0;i<lines.length;i++){var l=lines[i].replace(/^[#*\d.\s:-]+|[:*\s]+$/g,"");if(l.length&&l.length<50&&it[1].test(l)){idx=i;break}}
+if(cur=="resume"&&it[0]=="Contact details"){var ok=/[\w.+-]+@[\w-]+\.[\w.]+/.test(text),ph=/(\+?\d[\d\s-]{8,})/.test(text);res.push([it[0],ok&&ph?"ok":ok||ph?"part":"miss",ok&&ph?"Email and phone found.":ok?"Email found but no phone number.":ph?"Phone found but no email.":"Add email, phone and LinkedIn/GitHub links."]);if(ok&&ph)full++;else if(ok||ph)part++;return}
+if(idx>=0){full++;pos.push([it[0],idx]);res.push([it[0],"ok","Clear section found."]);return}
+var kw=it[2]||new RegExp("\\b"+it[0].split(/[ \/&]+/)[0]+"\\b","i");
+if(kw.test(text)){part++;res.push([it[0],"part","Mentioned, but no clear heading. Add a labelled section."])}
+else res.push([it[0],"miss","Not found. This is a required part."])});
+var sg=[],words=text.split(/\s+/).length,nums=(text.match(/\d+(\.\d+)?\s?%|\b\d{2,}\b/g)||[]).length;
+for(var i=1;i<pos.length;i++)if(pos[i][1]<pos[i-1][1]){sg.push("Section order: '"+pos[i][0]+"' appears before '"+pos[i-1][0]+"'. Follow the standard order of this document type.");break}
+var long=lines.filter(function(l){return l.split(/\s+/).length>90}).length;
+if(long)sg.push(long+" paragraph(s) run over 90 words. Split them into shorter chunks or bullet points.");
+var bullets=lines.filter(function(l){return /^[-*\u2022]/.test(l)}).length;
+if(cur=="resume"){
+if(words>700)sg.push("Resume is about "+words+" words. Aim for one page (roughly 350-550 words).");
+if(words<150)sg.push("Resume is very short ("+words+" words). Add detail on projects and skills.");
+if(nums<3)sg.push("Add measurable results, e.g. 'reduced load time by 30%' or 'built a tool used by 200 students'.");
+if(bullets<4)sg.push("Use bullet points for projects and experience so recruiters can scan quickly.");
+if(!/\b(built|developed|designed|led|created|implemented|analy[sz]ed|improved)\b/i.test(text))sg.push("Start bullets with strong action verbs such as Built, Led, Designed, Improved.");
+}else{
+if(words<200)sg.push("Document is only "+words+" words. Add more explanation in each section.");
+if(!/\b(figure|fig\.|table|graph|diagram|chart)\b/i.test(text))sg.push("Add figures, tables or diagrams and refer to them in the text.");
+if(!/\[\d+\]|\(\w+,? \d{4}\)/.test(text)&&cur!="custom")sg.push("No in-text citations found. Cite sources, e.g. [1] or (Author, 2023).");
+if(cur=="project"&&nums<3)sg.push("Support the results with numbers: accuracy, time, cost, test counts.");
+if(cur=="lab"&&!/\b(error|uncertaint|deviation|accuracy)\b/i.test(text))sg.push("Discuss sources of error or uncertainty in the conclusion.");
+}
+res.filter(function(r){return r[1]=="miss"}).slice(0,3).forEach(function(r){sg.unshift("Add a '"+r[0]+"' section.")});
+var score=Math.round(((full+part*.5)/items.length)*90+Math.max(0,10-sg.length*2));score=Math.min(100,score);
+$("sc").textContent=score;$("sc").style.color=score>=80?"var(--ok)":score>=55?"var(--warn)":"var(--bad)";
+$("verdict").textContent=score>=80?"Strong. Polish and submit.":score>=55?"Getting there. Fix the gaps below.":"Needs work. Start with missing sections.";
+$("req").innerHTML=res.map(function(r){var c=r[1]=="ok"?"t-ok":r[1]=="part"?"t-part":"t-miss",t=r[1]=="ok"?"Found":r[1]=="part"?"Partial":"Missing";return "<li><span class='tag "+c+"'>"+t+"</span><span><b>"+r[0]+"</b><br><span class='small'>"+r[2]+"</span></span></li>"}).join("");
+$("sug").innerHTML=sg.length?sg.map(function(s){return "<li><span>"+s.replace(/</g,"&lt;")+"</span></li>"}).join(""):"<li><span>No structural issues found. Nice work.</span></li>";
+var sp=pos.slice().sort(function(a,b){return a[1]-b[1]}),wc=sp.map(function(p,i){var e=i+1<sp.length?sp[i+1][1]:lines.length;return [p[0],lines.slice(p[1]+1,e).join(" ").split(/\s+/).filter(Boolean).length]}),mx=Math.max.apply(null,wc.map(function(w){return w[1]}).concat([1]));
+$("bal").innerHTML=wc.length?wc.map(function(w){return "<li><span style='width:190px;flex:none'>"+w[0]+"</span><span class='bar'><i style='width:"+Math.round(w[1]/mx*100)+"%'></i></span><span class='small' style='width:60px;text-align:right'>"+w[1]+"w</span></li>"}).join(""):"<li><span class='small'>No sections detected.</span></li>";
+wc.filter(function(w){return w[1]<15&&words>150}).forEach(function(w){sg.push("'"+w[0]+"' has only "+w[1]+" words. Expand it with specifics.")});
+var pv=(text.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/gi)||[]).length,fl=(text.match(/\b(very|really|basically|just|stuff|things|etc)\b/gi)||[]).length;
+if(pv>3)sg.push("Found "+pv+" passive phrases (e.g. 'was developed'). Prefer active voice: 'I developed'.");
+if(fl>5)sg.push("Found "+fl+" vague filler words (very, really, stuff, things). Replace them with specific details.");
+$("sug").innerHTML=sg.length?sg.map(function(s){return "<li><span>"+s.replace(/</g,"&lt;")+"</span></li>"}).join(""):"<li><span>No structural issues found. Nice work.</span></li>";
+var kwTxt="",jd=$("jd").value.trim();$("kwc").style.display="none";
+if(cur=="resume"&&jd){var stop="and the for you are our can has not but all any with that this have from your will they their about which would there been were what when into more other than also work team experience skills ability strong years required preferred".split(" "),f={};(jd.toLowerCase().match(/[a-z+#]{3,}/g)||[]).forEach(function(w){if(stop.indexOf(w)<0)f[w]=(f[w]||0)+1});
+var kws=Object.keys(f).sort(function(a,b){return f[b]-f[a]}).slice(0,15),tl=text.toLowerCase(),hit=kws.filter(function(k){return tl.indexOf(k)>=0}),ms=kws.filter(function(k){return tl.indexOf(k)<0});
+$("kw").innerHTML="<p><b>"+hit.length+" of "+kws.length+"</b> top job keywords appear in your resume.</p>"+hit.map(function(k){return "<span class='chip t-ok'>"+k+"</span>"}).join("")+ms.map(function(k){return "<span class='chip t-miss'>"+k+"</span>"}).join("")+(ms.length?"<p class='small'>Red keywords are missing. Add them where they honestly describe your experience.</p>":"");
+$("kwc").style.display="block";kwTxt="\n\nKeyword match: "+hit.length+"/"+kws.length+". Missing: "+ms.join(", ")}
+var H=[];try{H=JSON.parse(localStorage.getItem("fc_hist")||"[]")}catch(e){}
+var prev=H.filter(function(h){return h.t==cur}).slice(-1)[0];H.push({t:cur,s:score});H=H.slice(-30);try{localStorage.setItem("fc_hist",JSON.stringify(H))}catch(e){}
+var mine=H.filter(function(h){return h.t==cur}).slice(-8);
+$("hist").innerHTML=mine.map(function(h){return "<span class='hb' style='height:"+Math.max(6,h.s)+"%'><em>"+h.s+"</em></span>"}).join("");
+$("delta").textContent=prev?(score>prev.s?"Up "+(score-prev.s)+" points since your last "+TYPES[cur].label.toLowerCase()+" check.":score<prev.s?"Down "+(prev.s-score)+" points since your last check.":"Same score as your last check."):"First check of this type. Edit and re-check to track your progress.";
+var RPT="FolioCheck report: "+TYPES[cur].label+"\nScore: "+score+"/100\n\nRequirements:\n"+res.map(function(r){return "- "+r[0]+": "+r[1]+" ("+r[2]+")"}).join("\n")+"\n\nSuggestions:\n"+sg.map(function(s){return "- "+s}).join("\n")+kwTxt;
+$("cp").onclick=function(){var b=$("cp");function done(){b.textContent="Copied!";setTimeout(function(){b.textContent="Copy report"},1500)}try{navigator.clipboard.writeText(RPT).then(done,function(){alert(RPT)})}catch(e){alert(RPT)}};
+$("out").style.display="block";$("out").scrollIntoView({behavior:"smooth"})}
+var SAMPLES={resume:"Riya Sharma\nriya@example.com\n\nObjective\nMotivated student seeking an internship in software.\n\nEducation\nB.Tech Computer Engineering, CGPA 8.1\n\nProjects\nStudent Attendance App\n- Made an app for attendance\n- Worked on the database\n\nSkills\nPython, Java, SQL",project:"Abstract\nThis project builds a chatbot for a college.\n\nIntroduction\nStudents ask many repeated questions.\n\nMethodology\nWe used Python and a small dataset.\n\nResults\nThe chatbot answers questions.\n\nObjectives\nTo reduce helpdesk load.",lab:"Aim\nTo verify Ohm's law.\n\nApparatus\nResistor, ammeter, voltmeter, battery.\n\nProcedure\nConnect the circuit and take readings.\n\nObservations\nVoltage and current were noted.\n\nResult\nV is proportional to I."};
+$("go").onclick=check;
+$("sample").onclick=function(){if(cur=="custom"){$("rub").value="Abstract, Methodology, Results, Conclusion, References";$("txt").value="Abstract\nShort summary.\n\nMethodology\nWe did an experiment.\n\nResults\nIt worked."}else $("txt").value=SAMPLES[cur]};
+$("file").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$("txt").value=r.result};r.readAsText(f)};
+tabs();
+</script></body></html>
